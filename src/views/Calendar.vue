@@ -133,11 +133,11 @@ export default {
       //데이타 생성시 발생 이밴트
       eventAdd: async (info) => {
               state.inputs.title = info.event.title;
-        state.inputs.start = info.event.startStr;
-        state.inputs.end = info.event.endStr;
-        state.inputs.allDay = ((info.event.allDay)?1:0);
+              state.inputs.start = info.event.startStr;
+              state.inputs.end = info.event.endStr;
+              state.inputs.allDay = ((info.event.allDay)?1:0);
 
-        await calendarService.save(info.event);
+              await calendarService.save(info.event);
       },  
       //데이타 변경시 발생 이밴트
 

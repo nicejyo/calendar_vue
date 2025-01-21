@@ -8,11 +8,6 @@ const router = createRouter({
       name: 'main',
       component: () => import('../views/Calendar.vue'),
     },
-    {
-      path: '/1',
-      name: '1',
-      component: () => import('../views/Calendar2.vue'),
-    },
   ],
 })
 
