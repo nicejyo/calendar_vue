@@ -8,13 +8,13 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // http://localhost:8080
 // https://app.cloudtype.io/@nicejyo/calendar:main/calendar-boot
 export default defineConfig({
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://port-0-calendar-api-m6647c5e231f83ec.sel4.cloudtype.app',
-      },
-    },
-  },
+  //server: {
+  //  proxy: {
+  //    '/api': {
+  //      target: 'http://localhost:8080',
+  //    },
+  //  },
+  //},
   plugins: [
     vue(),
     vueDevTools(),
@@ -24,4 +24,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    outDir: '../back-end/api/src/main/resources/static'
+  ,}
 })

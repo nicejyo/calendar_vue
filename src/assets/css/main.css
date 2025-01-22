@@ -1,0 +1,33 @@
+/* 이전 버튼 스타일 */
+.fc-prev-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
+
+/* 다음 버튼 스타일 */
+.fc-next-button {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
+
+/* 오늘 버튼 스타일 */
+.fc-today-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
+
+/* 캘린더 제목 스타일 */
+.fc-toolbar-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
