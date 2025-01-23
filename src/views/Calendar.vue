@@ -153,13 +153,13 @@ export default {
         if (!calendarApi) return; // calendarApi가 정의되지 않았으면 종료
 
         if (window.innerWidth < 768) {
-            calendarApi.setOption('longPressDelay', 200);
-            calendarApi.setOption('eventDragMinDistance', 5);
+            //calendarApi.setOption('longPressDelay', 200);
+            //calendarApi.setOption('eventDragMinDistance', 5);
             document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
             document.querySelector('.fc-scroller').style.overflowY = 'auto';
         } else {
-            calendarApi.setOption('longPressDelay', 300);
-            calendarApi.setOption('eventDragMinDistance', 1);
+            //calendarApi.setOption('longPressDelay', 300);
+            //calendarApi.setOption('eventDragMinDistance', 1);
         };
       },
       datesSet: function(info) {
@@ -268,6 +268,8 @@ export default {
       if(info.startStr.length > 10){
         startStr = startStr + " ";
         startStr = startStr + info.startStr.match(/T(\d{2}:\d{2})/)[1]; 
+      }
+      if(info.endStr.length > 10){
         startStr = startStr + "∼";
         startStr = startStr + info.endStr.match(/T(\d{2}:\d{2})/)[1]; 
       }
@@ -275,8 +277,10 @@ export default {
       selectedDate.value = startStr; // 선택한 날짜 저장
       selectedTitle.value = state.inputs.title; // 입력 초기화
 
-      document.body.style.overflow = 'hidden'; // 스크롤 막기
       isPopupOpen.value = true; // 팝업 열기
+      // 팝업 열기 코드
+      document.body.style.overflow = 'hidden'; // 스크롤 막기
+      document.querySelector('.popup-overlay').style.display = 'flex'; // 팝업 표시
     };
 
     // 이벤트 추가
@@ -312,6 +316,9 @@ export default {
           await calendarService.put(state.inputs);
       }
       selectedTitle.value = null;
+      calendarRef.value.getApi().unselect();
+      calendarRef.value.getApi().destroy();
+      calendarRef.value.getApi().render();
     };
 
     // 이벤트 삭제
@@ -331,19 +338,17 @@ export default {
 
     // 팝업 닫기
     const closePopup = () => {
-      document.body.style.overflow = ''; // 스크롤 원복
       isPopupOpen.value = false;
+      // 팝업 열기 코드
+      document.body.style.overflow = ''; // 스크롤 막기
+      document.querySelector('.popup-overlay').style.display = 'none'; // 팝업 표시
       eventTitle.value = "";
       selectedDate.value = null;
       selectedTitle.value = null;
-      // 팝업 닫힐 때 updateSize 호출
-      nextTick(() => {
-        // 팝업 닫힌 후 DOM 업데이트가 완료되면 updateSize 호출
-        if (calendarRef.value) {
-          calendarRef.value.getApi().updateSize();
-        }
-      });
+      //캘린더를 완전히 초기화해
+      calendarRef.value.getApi().destroy();
       calendarRef.value.getApi().render();
+      //calendarRef.value.getApi().refetchEvents(); //이벤트 데이터만 업데이트하려면
     };
     // 팝업이 열릴 때마다 입력 필드에 포커스 주기
     const focusInput = () => {
@@ -352,18 +357,6 @@ export default {
         if (inputElement) inputElement.focus();
       });
     };
-    // 팝업이 열릴 때 updateSize 호출하지 않도록 조건 처리
-    watch(isPopupOpen, (newState) => {
-      if (!newState) {
-        // 팝업 닫힐 때만 updateSize 호출
-        nextTick(() => {
-          if (calendarRef.value) {
-            calendarRef.value.getApi().updateSize();
-          }
-          calendarRef.value.getApi().render();
-        });
-      }
-    });
 
     // 화면 리사이징 시 FullCalendar 리사이즈
     window.addEventListener('resize', () => {
@@ -391,20 +384,35 @@ export default {
     };
   },
 };
+
+// 페이지 로드 및 리사이즈 시 화면 높이 계산
+function adjustViewportHeight() {
+  const vh = window.innerHeight * 0.01; // 화면 높이의 1% 계산
+  document.documentElement.style.setProperty('--vh', `${vh}px`); // CSS 변수를 설정
+}
+
+// 페이지 로드 시와 리사이즈 시마다 호출
+window.addEventListener('resize', adjustViewportHeight);
+adjustViewportHeight();
 </script>
 
 <style scoped>
 /* 키보드가 열릴 때 뷰포트 조정 방지 */
 html, body {
   height: 100%;
-  overflow: hidden;
+  width: 100%;
+  overflow: hidden; /* 스크롤 방지 */
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 .calendar-container {
   position: fixed; /* 고정 위치 설정 */
   top: 0; /* 화면 상단에 고정 */
   left: 0; /* 화면 왼쪽에 고정 */
   width: 100vw; /* 화면 전체 너비 사용 */
-  height: 100vh; /* 화면 전체 높이 사용 */
+  /* height: 100vh; /* 화면 전체 높이 사용 */
+  height: calc(var(--vh, 1vh) * 100); /* --vh를 사용하여 높이 계산 */
   z-index: 1000; /* 다른 콘텐츠보다 위에 표시 */
   overflow: hidden; /* 화면을 벗어나는 영역을 숨김 */
 }
@@ -415,11 +423,12 @@ html, body {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  /* height: 100vh;*/
+  height: calc(var(--vh, 1vh) * 100); /* --vh 사용 */
   background-color: rgba(0, 0, 0, 0.6); /* 불투명도 조정 (0.6) */
   display: flex;
   justify-content: center;
-  /*align-items: center;*/
+  align-items: center;
   z-index: 9999 !important; /* 다른 요소 위로 */
 }
 .popup {
@@ -438,26 +447,6 @@ html, body {
   max-height: calc(100vh - 100px); /* 화면에 키보드가 나타나더라도 크기를 제한 */
   overflow-y: auto;
 }
-
-/* 헤더 부분의 z-index를 낮춰서 팝업과 충돌하지 않게 설정 */
-.fc-toolbar {
-  z-index: 10; /* 헤더의 z-index 값을 낮춰 팝업과의 충돌을 방지 */
-}
-.fc-timegrid {
-  height: 100%; /* 높이를 100%로 설정 */
-  overflow-y: auto; /* 수직 스크롤 허용 */
-  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
-}
-.fc-timegrid-body {
-  overflow-y: auto; /* 수직 스크롤 허용 */
-  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
-}
-.fc-scroller {
-  max-height: calc(100vh - 150px); /* 화면 크기에 맞춰서 스크롤 영역 제한 */
-  overflow-y: auto; /* 수직 스크롤 허용 */
-  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
-}
-
 /* 일정 제목 스타일 */
 .event-title {
   display: block;
@@ -475,14 +464,12 @@ html, body {
   border-radius: 5px;
   overflow-wrap: break-word; /* 긴 텍스트도 잘리지 않도록 */
 }
-
 /* 입력 필드를 중앙에 위치 */
 .input-container {
   display: flex;
   justify-content: center;
   width: 100%;
 }
-
 /* 입력 필드 스타일 */
 .input-container input {
   width: 100%;
@@ -492,7 +479,6 @@ html, body {
   font-size: 1rem;
   margin-bottom: 15px;
 }
-
 /* 버튼 스타일 */
 .popup-buttons {
   display: flex;
@@ -515,7 +501,6 @@ html, body {
   background-color: #007bff;
   color: white;
 }
-
 /* 버튼 기본 스타일 */
 .popup-buttons button {
   padding: 0.5rem 1rem;
@@ -524,95 +509,55 @@ html, body {
   cursor: pointer;
   transition: background-color 0.3s, transform 0.2s, border-color 0.3s;
 }
-
 /* 첫 번째 버튼 - Primary 스타일 */
 .popup-buttons button:first-child {
   background-color: #007bff;
   color: white;
   border-color: #007bff; /* 기본 테두리 색 */
 }
-
 /* 첫 번째 버튼 hover 효과 */
 .popup-buttons button:first-child:hover {
   background-color: #0056b3; /* 더 어두운 파란색 */
   border-color: #004494; /* 테두리 강조 */
   box-shadow: 0 0 8px rgba(0, 85, 187, 0.6); /* 외곽선 효과 */
 }
-
 /* 첫 번째 버튼 active 효과 */
 .popup-buttons button:first-child:active {
   background-color: #004494; /* 더 짙은 파란색 */
   transform: scale(0.95); /* 살짝 눌린 효과 */
 }
-
 /* 두 번째 버튼 - Secondary 스타일 */
 .popup-buttons button:last-child {
   background-color: #f0f0f0;
   color: black;
   border-color: #d6d6d6; /* 기본 테두리 색 */
 }
-
 /* 두 번째 버튼 hover 효과 */
 .popup-buttons button:last-child:hover {
   background-color: #d6d6d6; /* 더 어두운 회색 */
   border-color: #b0b0b0; /* 테두리 강조 */
   box-shadow: 0 0 8px rgba(160, 160, 160, 0.6); /* 외곽선 효과 */
 }
-
 /* 두 번째 버튼 active 효과 */
 .popup-buttons button:last-child:active {
   background-color: #c0c0c0; /* 더 짙은 회색 */
   transform: scale(0.95); /* 살짝 눌린 효과 */
 }
 /* 터치 스크롤을 허용 */
-.fc-scroller {
-  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
-  overflow-y: auto; /* 수직 스크롤 활성화 */
-  touch-action: pan-y; /* 터치 스크롤을 수직으로만 활성화 */
-}
 
+/* 헤더 부분의 z-index를 낮춰서 팝업과 충돌하지 않게 설정 */
+.fc-toolbar {
+  z-index: 10; /* 헤더의 z-index 값을 낮춰 팝업과의 충돌을 방지 */
+}
 .fc-timegrid {
+  height: 100%; /* 높이를 100%로 설정 */
+  overflow-y: auto; /* 수직 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
   touch-action: pan-y; /* 수직 스크롤만 가능하도록 설정 */
 }
+.fc-timegrid-body {
+  overflow-y: auto; /* 수직 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+}
 
-/* 반응형 디자인 (모바일 화면에서 팝업 최적화) */
-@media (max-width: 768px) {
-  .fc-toolbar {
-    display: block;
-    text-align: center;
-  }
-  
-  .fc-toolbar .fc-left,
-  .fc-toolbar .fc-center,
-  .fc-toolbar .fc-right {
-    display: block;
-    width: 100%;
-    text-align: center;
-  }
-  
-  .fc-toolbar button {
-    font-size: 14px;
-    padding: 8px 12px;
-    margin: 4px 0; /* 버튼 사이의 간격을 줄입니다 */
-  }
-}
-/* 더 작은 화면에서 텍스트 크기 조정 */
-@media (max-width: 480px) {
-  .popup {
-    padding: 15px;
-  }
-  .event-title {
-    font-size: 1rem; /* 모바일에서 폰트 크기 조정 */
-  }
-  .popup-buttons button {
-    font-size: 0.9rem; /* 버튼 폰트 크기 조정 */
-  }
-  .input-container input {
-    font-size: 0.9rem; /* 입력 필드 폰트 크기 조정 */
-  }
-  .fc-toolbar button {
-    font-size: 12px; /* 버튼 크기 줄이기 */
-    padding: 6px 10px;
-  }
-}
 </style>
