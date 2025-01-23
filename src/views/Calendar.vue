@@ -248,7 +248,6 @@ export default {
       isPopupOpen.value = true; // 팝업 열기
       // 팝업 열기 코드
       document.body.style.overflow = 'hidden'; // 스크롤 막기
-      document.querySelector('.popup-overlay').style.display = 'flex'; // 팝업 표시
       focusInput(); // 팝업이 열릴 때 포커스
     };
 
@@ -277,7 +276,6 @@ export default {
       isPopupOpen.value = true; // 팝업 열기
       // 팝업 열기 코드
       document.body.style.overflow = 'hidden'; // 스크롤 막기
-      document.querySelector('.popup-overlay').style.display = 'flex'; // 팝업 표시
     };
 
     // 이벤트 추가
@@ -338,7 +336,6 @@ export default {
       isPopupOpen.value = false;
       // 팝업 열기 코드
       document.body.style.overflow = ''; // 스크롤 막기
-      document.querySelector('.popup-overlay').style.display = 'none'; // 팝업 표시
       eventTitle.value = "";
       selectedDate.value = null;
       selectedTitle.value = null;
