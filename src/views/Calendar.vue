@@ -1,6 +1,6 @@
 <template>
   <div>
-    <FullCalendar ref="calendarRef" :options="calendarOptions" />
+    <FullCalendar ref="calendarRef" :options="calendarOptions"/>
   </div>
   <!-- 커스텀 팝업 -->
   <div v-if="isPopupOpen" class="popup-overlay">
@@ -67,6 +67,20 @@ export default {
           interactionPlugin // needed for dateClick
         ],
       initialView: "dayGridMonth",
+      //contentHeight: 'auto', // 동적 높이 설정
+      scrollTime: '08:00:00',
+      events: state.events,
+      editable: false,
+      selectable: true,
+      selectMirror: true,
+      eventStartEditable: true,
+      eventDurationEditable: true,
+      dayMaxEvents: true,
+      weekends: true,
+      longPressDelay: 500, // 터치 드래그를 위한 길게 누르기 지연 시간
+      //eventLongPressDelay: 1000, // 일정 드래그 시작 지연 시간  - 미지정시 longPressDelay를 따름
+      //selectLongPressDelay: 1000, // 선택을 위한 길게 누르기 지연 시간
+      height: '100vh', // 화면 전체 높이를 기준으로 캘린더를 렌더링
       headerToolbar: {
         left: 'myPrev,myNext myToday',
         center: 'title',
@@ -78,19 +92,13 @@ export default {
       },
       views: {
         timeGridWeek: {
+          scrollTime: '08:00:00',
           slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }, // 24시간제
         },
-        timeGridDay: {
-          slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }, // 24시간제
-        },
+        //timeGridDay: {
+        //  slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }, // 24시간제
+        //},
       },
-      events: state.events,
-      editable: true,
-      selectable: true,
-      selectMirror: true,
-      dayMaxEvents: true,
-      weekends: true,
-      longPressDelay : 1, // 터치할 때 누르는 시간 조절
       customButtons: {
         myPrev: {
           text: "〈",
@@ -127,6 +135,21 @@ export default {
             ReLoadEvents(day);
           },
         },
+      },
+      eventDragStart: function(info) {
+        console.log('Drag started on mobile:', info.event);
+      },
+      eventDragStop: function(info) {
+        console.log('Drag stopped on mobile:', info.event);
+      },
+      windowResize: function(view) {
+        if (window.innerWidth < 768) {
+          view.calendar.setOption('longPressDelay', 200);
+          view.calendar.setOption('eventDragMinDistance', 5);
+        } else {
+          view.calendar.setOption('longPressDelay', 300);
+          view.calendar.setOption('eventDragMinDistance', 1);
+        }
       },
       //신규 일정 생성
       select: (selectInfo) => {
@@ -190,7 +213,13 @@ export default {
       //모든 이밴트 감지
       eventsSet:  () => {
         //console.log("eventsSet loaded");
-      },  
+      },
+      windowResize: function(view) {
+        // 모바일 환경에서 스크롤 높이를 재조정
+        if (window.innerWidth < 768) {
+          document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
+        }
+      },
     };
 
     const ReLoadEvents = async (todayStr) => {
@@ -286,6 +315,7 @@ export default {
       eventTitle.value = "";
       selectedDate.value = null;
       selectedTitle.value = null;
+      calendarRef.value.getApi().render();
     };
     // 팝업이 열릴 때마다 입력 필드에 포커스 주기
     const focusInput = () => {
@@ -326,7 +356,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* 다른 요소 위로 */
+  z-index: 9999 !important; /* 다른 요소 위로 */
 }
 
 /* 팝업 창 */
@@ -467,6 +497,17 @@ export default {
     padding: 8px 12px;
     margin: 4px 0; /* 버튼 사이의 간격을 줄입니다 */
   }
+}
+
+/* 터치 스크롤을 허용 */
+.fc-scroller {
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+  overflow-y: auto; /* 수직 스크롤 활성화 */
+  touch-action: pan-y; /* 터치 스크롤을 수직으로만 활성화 */
+}
+
+.fc-timegrid {
+  touch-action: pan-y; /* 수직 스크롤만 가능하도록 설정 */
 }
 
 /* 더 작은 화면에서 텍스트 크기 조정 */
