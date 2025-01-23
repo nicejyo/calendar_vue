@@ -267,6 +267,7 @@ export default {
 
       selectedDate.value = startStr; // 선택한 날짜 저장
       eventTitle.value = ""; // 입력 초기화
+      document.body.style.overflow = 'hidden'; // 스크롤 막기
       isPopupOpen.value = true; // 팝업 열기
       focusInput(); // 팝업이 열릴 때 포커스
     };
@@ -290,6 +291,8 @@ export default {
       
       selectedDate.value = startStr; // 선택한 날짜 저장
       selectedTitle.value = state.inputs.title; // 입력 초기화
+
+      document.body.style.overflow = 'hidden'; // 스크롤 막기
       isPopupOpen.value = true; // 팝업 열기
     };
 
@@ -329,11 +332,16 @@ export default {
 
     // 팝업 닫기
     const closePopup = () => {
+      document.body.style.overflow = ''; // 스크롤 원복
       isPopupOpen.value = false;
       eventTitle.value = "";
       selectedDate.value = null;
       selectedTitle.value = null;
       calendarRef.value.getApi().render();
+      // 팝업 닫힐 때 updateSize 호출
+      if (calendarRef.value) {
+        calendarRef.value.getApi().updateSize();
+      }
     };
     // 팝업이 열릴 때마다 입력 필드에 포커스 주기
     const focusInput = () => {
@@ -342,6 +350,15 @@ export default {
         if (inputElement) inputElement.focus();
       });
     };
+    // 팝업이 열릴 때 updateSize 호출하지 않도록 조건 처리
+    watch(isPopupOpen, (newState) => {
+      if (!newState) {
+        // 팝업 닫힐 때만 updateSize 호출
+        if (calendarRef.value) {
+          calendarRef.value.getApi().updateSize();
+        }
+      }
+    });
 
     return {
       calendarRef,
@@ -362,6 +379,11 @@ export default {
 </script>
 
 <style scoped>
+/* 키보드가 열릴 때 뷰포트 조정 방지 */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
 .calendar-container {
   position: fixed; /* 고정 위치 설정 */
   top: 0; /* 화면 상단에 고정 */
