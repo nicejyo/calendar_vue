@@ -86,7 +86,7 @@ export default {
       longPressDelay: 500, // 터치 드래그를 위한 길게 누르기 지연 시간
       //eventLongPressDelay: 1000, // 일정 드래그 시작 지연 시간  - 미지정시 longPressDelay를 따름
       //selectLongPressDelay: 1000, // 선택을 위한 길게 누르기 지연 시간
-      height: '100vh', // 화면 전체 높이를 기준으로 캘린더를 렌더링
+      height: '100dvh', // 화면 전체 높이를 기준으로 캘린더를 렌더링
       headerToolbar: {
         left: 'myPrev,myNext myToday',
         center: 'title',
@@ -153,14 +153,8 @@ export default {
         if (!calendarApi) return; // calendarApi가 정의되지 않았으면 종료
 
         if (window.innerWidth < 768) {
-            //calendarApi.setOption('longPressDelay', 200);
-            //calendarApi.setOption('eventDragMinDistance', 5);
-            //document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
-            document.querySelector('.fc-scroller').style.maxHeight = '100vh';
+            document.querySelector('.fc-scroller').style.maxHeight = '100dvh';
             document.querySelector('.fc-scroller').style.overflowY = 'auto';
-        } else {
-            //calendarApi.setOption('longPressDelay', 300);
-            //calendarApi.setOption('eventDragMinDistance', 1);
         };
       },
       datesSet: function(info) {
@@ -387,22 +381,12 @@ export default {
     };
   },
 };
-
-// 페이지 로드 및 리사이즈 시 화면 높이 계산
-function adjustViewportHeight() {
-  const vh = window.innerHeight * 0.01; // 화면 높이의 1% 계산
-  document.documentElement.style.setProperty('--vh', `${vh}px`); // CSS 변수를 설정
-}
-
-// 페이지 로드 시와 리사이즈 시마다 호출
-window.addEventListener('resize', adjustViewportHeight);
-adjustViewportHeight();
 </script>
 
 <style scoped>
 /* 키보드가 열릴 때 뷰포트 조정 방지 */
 html, body {
-  height: 100%;
+  height: 100dvh;
   width: 100%;
   overflow: hidden; /* 스크롤 방지 */
   margin: 0;
@@ -414,8 +398,7 @@ html, body {
   top: 0; /* 화면 상단에 고정 */
   left: 0; /* 화면 왼쪽에 고정 */
   width: 100vw; /* 화면 전체 너비 사용 */
-  /* height: 100vh; /* 화면 전체 높이 사용 */
-  height: calc(var(--vh, 1vh) * 100); /* --vh를 사용하여 높이 계산 */
+  height: 100dvh; /* 화면 전체 높이 사용 */
   z-index: 1000; /* 다른 콘텐츠보다 위에 표시 */
   overflow: hidden; /* 화면을 벗어나는 영역을 숨김 */
 }
@@ -426,8 +409,7 @@ html, body {
   top: 0;
   left: 0;
   width: 100vw;
-  /* height: 100vh;*/
-  height: calc(var(--vh, 1vh) * 100); /* --vh 사용 */
+  height: 100dvh;
   background-color: rgba(0, 0, 0, 0.6); /* 불투명도 조정 (0.6) */
   display: flex;
   justify-content: center;
@@ -447,7 +429,7 @@ html, body {
   text-align: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   z-index: 1100;
-  max-height: calc(100vh - 100px); /* 화면에 키보드가 나타나더라도 크기를 제한 */
+  max-height: calc(100dvh - 100px); /* 화면에 키보드가 나타나더라도 크기를 제한 */
   overflow-y: auto;
 }
 /* 일정 제목 스타일 */
