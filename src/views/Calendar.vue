@@ -143,19 +143,24 @@ export default {
         },
       },
       eventDragStart: function(info) {
-        console.log('Drag started on mobile:', info.event);
+        //console.log('Drag started on mobile:', info.event);
       },
       eventDragStop: function(info) {
-        console.log('Drag stopped on mobile:', info.event);
+        //console.log('Drag stopped on mobile:', info.event);
       },
       windowResize: function(view) {
+        const calendarApi = calendarRef.value?.getApi(); // calendarApi 가져오기
+        if (!calendarApi) return; // calendarApi가 정의되지 않았으면 종료
+
         if (window.innerWidth < 768) {
-          view.calendar.setOption('longPressDelay', 200);
-          view.calendar.setOption('eventDragMinDistance', 5);
+            calendarApi.setOption('longPressDelay', 200);
+            calendarApi.setOption('eventDragMinDistance', 5);
+            document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
+            document.querySelector('.fc-scroller').style.overflowY = 'auto';
         } else {
-          view.calendar.setOption('longPressDelay', 300);
-          view.calendar.setOption('eventDragMinDistance', 1);
-        }
+            calendarApi.setOption('longPressDelay', 300);
+            calendarApi.setOption('eventDragMinDistance', 1);
+        };
       },
       datesSet: function(info) {
         const scrollerEl = document.querySelector('.fc-scroller');
@@ -200,25 +205,12 @@ export default {
         //}
       }, 
       //데이타 생성시 발생 이밴트
-      eventAdd: async (info) => {
-              state.inputs.title = info.event.title;
-              state.inputs.start = info.event.startStr;
-              state.inputs.end = info.event.endStr;
-              state.inputs.allDay = ((info.event.allDay)?1:0);
-
-              await calendarService.save(info.event);
-              selectedTitle.value = null;
+      eventAdd: (info) => {
+        handleEventChangeOrAdd(info, true);
       },  
       //데이타 변경시 발생 이밴트
-      eventChange: async (info) => {
-              state.inputs.id = info.event.id;
-              state.inputs.title = info.event.title;
-              state.inputs.start = info.event.startStr;
-              state.inputs.end = info.event.endStr;
-              state.inputs.allDay = ((info.event.allDay)?1:0);
-
-              await calendarService.put(info.event);
-              selectedTitle.value = null;
+      eventChange: (info) => {
+        handleEventChangeOrAdd(info, false);
       },
       //데이타 삭제시 발생 이밴트
       eventRemove: async (info) => {
@@ -227,14 +219,6 @@ export default {
       }, 
       //모든 이밴트 감지
       eventsSet:  () => {
-        //console.log("eventsSet loaded");
-      },
-      windowResize: function(view) {
-        if (window.innerWidth < 768) {
-          // 모바일 환경에서 스크롤을 적절히 설정
-          document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
-          document.querySelector('.fc-scroller').style.overflowY = 'auto';
-        }
       },
     };
 
@@ -244,8 +228,7 @@ export default {
       const calendarApi = calendarRef.value.getApi();
       calendarApi.removeAllEvents();  // 기존 이벤트 제거 (필요한 경우)
       calendarApi.addEventSource(state.events);  // 새로운 이벤트 추가
-      calendarApi.render();
-      //console.log("state.events", state.events);  // 데이터 확인
+      //calendarApi.render(); //이벤트가 추가될 때 자동으로 호출
     };
 
     ReLoadEvents(todayStr);
@@ -315,6 +298,22 @@ export default {
       }
       closePopup();
     };
+    // 이벤트 저장 및 수정
+    const handleEventChangeOrAdd = async (info, isAdd = true) => {
+      state.inputs.id = info.event.id;
+      state.inputs.title = info.event.title;
+      state.inputs.start = info.event.startStr;
+      state.inputs.end = info.event.endStr;
+      state.inputs.allDay = (info.event.allDay ? 1 : 0);
+
+      if (isAdd) {
+          await calendarService.save(state.inputs);
+      } else {
+          await calendarService.put(state.inputs);
+      }
+      selectedTitle.value = null;
+    };
+
     // 이벤트 삭제
     const deleteEvent = () => {
         if (confirm("선택한 일정을 삭제 하시겠습니까?")) {
@@ -337,7 +336,6 @@ export default {
       eventTitle.value = "";
       selectedDate.value = null;
       selectedTitle.value = null;
-      calendarRef.value.getApi().render();
       // 팝업 닫힐 때 updateSize 호출
       nextTick(() => {
         // 팝업 닫힌 후 DOM 업데이트가 완료되면 updateSize 호출
@@ -345,6 +343,7 @@ export default {
           calendarRef.value.getApi().updateSize();
         }
       });
+      calendarRef.value.getApi().render();
     };
     // 팝업이 열릴 때마다 입력 필드에 포커스 주기
     const focusInput = () => {
@@ -361,6 +360,7 @@ export default {
           if (calendarRef.value) {
             calendarRef.value.getApi().updateSize();
           }
+          calendarRef.value.getApi().render();
         });
       }
     });
@@ -387,6 +387,7 @@ export default {
       selectAddEvent,
       deleteEvent,
       closePopup,
+      handleEventChangeOrAdd,
     };
   },
 };
@@ -421,18 +422,6 @@ html, body {
   /*align-items: center;*/
   z-index: 9999 !important; /* 다른 요소 위로 */
 }
-
-/* 팝업 창 */
-/*.popup {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  width: 300px;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1100; 
-}
-*/
 .popup {
   position: fixed;
   top: 50%;
@@ -575,6 +564,16 @@ html, body {
   background-color: #c0c0c0; /* 더 짙은 회색 */
   transform: scale(0.95); /* 살짝 눌린 효과 */
 }
+/* 터치 스크롤을 허용 */
+.fc-scroller {
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+  overflow-y: auto; /* 수직 스크롤 활성화 */
+  touch-action: pan-y; /* 터치 스크롤을 수직으로만 활성화 */
+}
+
+.fc-timegrid {
+  touch-action: pan-y; /* 수직 스크롤만 가능하도록 설정 */
+}
 
 /* 반응형 디자인 (모바일 화면에서 팝업 최적화) */
 @media (max-width: 768px) {
@@ -597,26 +596,7 @@ html, body {
     margin: 4px 0; /* 버튼 사이의 간격을 줄입니다 */
   }
 }
-
-/* 터치 스크롤을 허용 */
-.fc-scroller {
-  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
-  overflow-y: auto; /* 수직 스크롤 활성화 */
-  touch-action: pan-y; /* 터치 스크롤을 수직으로만 활성화 */
-}
-
-.fc-timegrid {
-  touch-action: pan-y; /* 수직 스크롤만 가능하도록 설정 */
-}
-
 /* 더 작은 화면에서 텍스트 크기 조정 */
-@media (max-width: 480px) {
-  .fc-toolbar button {
-    font-size: 12px; /* 버튼 크기 줄이기 */
-    padding: 6px 10px;
-  }
-}
-
 @media (max-width: 480px) {
   .popup {
     padding: 15px;
@@ -629,6 +609,10 @@ html, body {
   }
   .input-container input {
     font-size: 0.9rem; /* 입력 필드 폰트 크기 조정 */
+  }
+  .fc-toolbar button {
+    font-size: 12px; /* 버튼 크기 줄이기 */
+    padding: 6px 10px;
   }
 }
 </style>
