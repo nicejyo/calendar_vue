@@ -339,9 +339,12 @@ export default {
       selectedTitle.value = null;
       calendarRef.value.getApi().render();
       // 팝업 닫힐 때 updateSize 호출
-      if (calendarRef.value) {
-        calendarRef.value.getApi().updateSize();
-      }
+      nextTick(() => {
+        // 팝업 닫힌 후 DOM 업데이트가 완료되면 updateSize 호출
+        if (calendarRef.value) {
+          calendarRef.value.getApi().updateSize();
+        }
+      });
     };
     // 팝업이 열릴 때마다 입력 필드에 포커스 주기
     const focusInput = () => {
@@ -354,10 +357,21 @@ export default {
     watch(isPopupOpen, (newState) => {
       if (!newState) {
         // 팝업 닫힐 때만 updateSize 호출
+        nextTick(() => {
+          if (calendarRef.value) {
+            calendarRef.value.getApi().updateSize();
+          }
+        });
+      }
+    });
+
+    // 화면 리사이징 시 FullCalendar 리사이즈
+    window.addEventListener('resize', () => {
+      nextTick(() => {
         if (calendarRef.value) {
           calendarRef.value.getApi().updateSize();
         }
-      }
+      });
     });
 
     return {
