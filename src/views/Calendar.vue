@@ -155,7 +155,8 @@ export default {
         if (window.innerWidth < 768) {
             //calendarApi.setOption('longPressDelay', 200);
             //calendarApi.setOption('eventDragMinDistance', 5);
-            document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
+            //document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
+            document.querySelector('.fc-scroller').style.maxHeight = '100vh';
             document.querySelector('.fc-scroller').style.overflowY = 'auto';
         } else {
             //calendarApi.setOption('longPressDelay', 300);
@@ -250,8 +251,10 @@ export default {
 
       selectedDate.value = startStr; // 선택한 날짜 저장
       eventTitle.value = ""; // 입력 초기화
-      document.body.style.overflow = 'hidden'; // 스크롤 막기
       isPopupOpen.value = true; // 팝업 열기
+      // 팝업 열기 코드
+      document.body.style.overflow = 'hidden'; // 스크롤 막기
+      document.querySelector('.popup-overlay').style.display = 'flex'; // 팝업 표시
       focusInput(); // 팝업이 열릴 때 포커스
     };
 
@@ -559,5 +562,6 @@ html, body {
   overflow-y: auto; /* 수직 스크롤 허용 */
   -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
 }
+
 
 </style>
