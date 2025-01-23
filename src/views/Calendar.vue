@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { ref, provide, reactive, nextTick } from "vue";
+import { ref, provide, reactive, nextTick, watch } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
