@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <FullCalendar ref="calendarRef" :options="calendarOptions"/>
+  <div class="calendar-container">
+    <FullCalendar ref="calendarRef" :options="calendarOptions" />
   </div>
   <!-- 커스텀 팝업 -->
   <div v-if="isPopupOpen" class="popup-overlay">
@@ -8,23 +8,23 @@
       <h3>{{ selectedDate }}</h3>
 
       <!-- 일정 제목 영역 -->
-      <span v-if="selectedTitle != null" class="event-title">{{ selectedTitle }}</span>
+      <span v-if="selectedTitle !== null" class="event-title">{{ selectedTitle }}</span>
 
       <!-- 일정 제목이 없을 때 input 영역 -->
-      <div v-if="selectedTitle == null" class="input-container">
+      <div v-if="selectedTitle === null" class="input-container">
         <input
           type="text"
           ref="eventTitleInput"
           v-model="eventTitle"
-          @keydown.enter="addEvent"
+          @keydown.enter="selectAddEvent"
           placeholder="일정을 입력해 주세요."
         />
       </div>
 
       <!-- 팝업 버튼들 -->
       <div class="popup-buttons">
-        <button v-if="selectedTitle == null" @click="addEvent">등록</button>
-        <button v-if="selectedTitle != null" @click="deleteEvent">삭제</button>
+        <button v-if="selectedTitle === null" @click="selectAddEvent">등록</button>
+        <button v-if="selectedTitle !== null" @click="deleteEvent">삭제</button>
         <button @click="closePopup">닫기</button>
       </div>
     </div>
@@ -57,6 +57,12 @@ export default {
   setup() {
 
     const calendarRef = ref(null);
+    // 팝업 상태 관리
+    const isPopupOpen = ref(false);
+    const eventTitle = ref("");
+    const selectedDate = ref(null);
+    const selectedTitle = ref(null);
+
 
     provide("calendarApi", calendarRef);
 
@@ -151,6 +157,13 @@ export default {
           view.calendar.setOption('eventDragMinDistance', 1);
         }
       },
+      datesSet: function(info) {
+        const scrollerEl = document.querySelector('.fc-scroller');
+        if (scrollerEl) {
+          scrollerEl.style.overflowY = 'auto';
+          scrollerEl.style.webkitOverflowScrolling = 'touch'; // iOS 호환
+        }
+      },
       //신규 일정 생성
       select: (selectInfo) => {
         selectClick(selectInfo);
@@ -180,7 +193,7 @@ export default {
       }, 
       //기존 일정 선택
       eventClick: (clickInfo) => {
-        eventClick(clickInfo.event);
+        eventOpenClick(clickInfo.event);
 
         //if (confirm(`선택한 일정을 삭제 하시겠습니까? \n['${clickInfo.event.title}']`)) {
         //  clickInfo.event.remove()
@@ -194,7 +207,7 @@ export default {
               state.inputs.allDay = ((info.event.allDay)?1:0);
 
               await calendarService.save(info.event);
-              selectedTitle = null;
+              selectedTitle.value = null;
       },  
       //데이타 변경시 발생 이밴트
       eventChange: async (info) => {
@@ -205,19 +218,22 @@ export default {
               state.inputs.allDay = ((info.event.allDay)?1:0);
 
               await calendarService.put(info.event);
+              selectedTitle.value = null;
       },
       //데이타 삭제시 발생 이밴트
       eventRemove: async (info) => {
         await calendarService.delete(info.event.id);
+        selectedTitle.value = null;
       }, 
       //모든 이밴트 감지
       eventsSet:  () => {
         //console.log("eventsSet loaded");
       },
       windowResize: function(view) {
-        // 모바일 환경에서 스크롤 높이를 재조정
         if (window.innerWidth < 768) {
+          // 모바일 환경에서 스크롤을 적절히 설정
           document.querySelector('.fc-scroller').style.maxHeight = 'calc(100vh - 150px)';
+          document.querySelector('.fc-scroller').style.overflowY = 'auto';
         }
       },
     };
@@ -232,29 +248,31 @@ export default {
       //console.log("state.events", state.events);  // 데이터 확인
     };
 
-    // 모바일에서 스크롤 방지
-    document.addEventListener('touchmove', function(event) {
-      event.preventDefault(); // 기본 동작을 방지 (스크롤을 차단하고 선택만 허용)
-    }, { passive: false });
-
     ReLoadEvents(todayStr);
-
-    // 팝업 상태 관리
-    const isPopupOpen = ref(false);
-    const eventTitle = ref("");
-    let selectedDate = ref(null);
-    let selectedTitle = ref(null);
 
     // 날짜 클릭 시 팝업 열기
     const selectClick = (info) => {
-      selectedDate.value = info.startStr; // 선택한 날짜 저장
+      state.inputs.start = info.start;
+      state.inputs.end = info.end;
+      state.inputs.allDay = info.allDay;
+
+      let startStr = info.startStr.replace(/T.*$/, '');
+      
+      if(info.startStr.length > 10){
+        startStr = startStr + " ";
+        startStr = startStr + info.startStr.match(/T(\d{2}:\d{2})/)[1]; 
+        startStr = startStr + "∼";
+        startStr = startStr + info.endStr.match(/T(\d{2}:\d{2})/)[1]; 
+      }
+
+      selectedDate.value = startStr; // 선택한 날짜 저장
       eventTitle.value = ""; // 입력 초기화
       isPopupOpen.value = true; // 팝업 열기
       focusInput(); // 팝업이 열릴 때 포커스
     };
 
     // 이밴트 시 팝업 열기
-    const eventClick = (info) => {
+    const eventOpenClick = (info) => {
       state.inputs.id = info.id;
       state.inputs.title = info.title;
       state.inputs.start = info.start;
@@ -271,12 +289,12 @@ export default {
       }
       
       selectedDate.value = startStr; // 선택한 날짜 저장
-      selectedTitle.value = info.title; // 입력 초기화
+      selectedTitle.value = state.inputs.title; // 입력 초기화
       isPopupOpen.value = true; // 팝업 열기
     };
 
     // 이벤트 추가
-    const addEvent = async () => {
+    const selectAddEvent = async () => {
       if (eventTitle.value.trim()) {
 
         const calendarApi = calendarRef.value.getApi();
@@ -287,9 +305,9 @@ export default {
         calendarApi.addEvent({
           id: getId,
           title : eventTitle.value,
-          start: selectedDate.value,
-          end: selectedDate.value,
-          allDay: true,
+          start: state.inputs.start,
+          end: state.inputs.end,
+          allDay: state.inputs.allDay,
         });
       }
       closePopup();
@@ -334,8 +352,8 @@ export default {
       selectedDate,
       selectedTitle,
       selectClick,
-      eventClick,
-      addEvent,
+      eventOpenClick,
+      selectAddEvent,
       deleteEvent,
       closePopup,
     };
@@ -344,6 +362,15 @@ export default {
 </script>
 
 <style scoped>
+.calendar-container {
+  position: fixed; /* 고정 위치 설정 */
+  top: 0; /* 화면 상단에 고정 */
+  left: 0; /* 화면 왼쪽에 고정 */
+  width: 100vw; /* 화면 전체 너비 사용 */
+  height: 100vh; /* 화면 전체 높이 사용 */
+  z-index: 1000; /* 다른 콘텐츠보다 위에 표시 */
+  overflow: hidden; /* 화면을 벗어나는 영역을 숨김 */
+}
 /* 팝업 스타일 */
 /* 불투명 처리된 배경 */
 .popup-overlay {
@@ -355,19 +382,55 @@ export default {
   background-color: rgba(0, 0, 0, 0.6); /* 불투명도 조정 (0.6) */
   display: flex;
   justify-content: center;
-  align-items: center;
+  /*align-items: center;*/
   z-index: 9999 !important; /* 다른 요소 위로 */
 }
 
 /* 팝업 창 */
-.popup {
+/*.popup {
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
   width: 300px;
   text-align: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1100; /* 팝업을 배경 위로 */
+  z-index: 1100; 
+}
+*/
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 팝업을 정확히 중앙에 배치 */
+  width: 90%;
+  max-width: 350px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1100;
+  max-height: calc(100vh - 100px); /* 화면에 키보드가 나타나더라도 크기를 제한 */
+  overflow-y: auto;
+}
+
+/* 헤더 부분의 z-index를 낮춰서 팝업과 충돌하지 않게 설정 */
+.fc-toolbar {
+  z-index: 10; /* 헤더의 z-index 값을 낮춰 팝업과의 충돌을 방지 */
+}
+.fc-timegrid {
+  height: 100%; /* 높이를 100%로 설정 */
+  overflow-y: auto; /* 수직 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+}
+.fc-timegrid-body {
+  overflow-y: auto; /* 수직 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+}
+.fc-scroller {
+  max-height: calc(100vh - 150px); /* 화면 크기에 맞춰서 스크롤 영역 제한 */
+  overflow-y: auto; /* 수직 스크롤 허용 */
+  -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
 }
 
 /* 일정 제목 스타일 */
