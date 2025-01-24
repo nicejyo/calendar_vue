@@ -66,6 +66,7 @@ export default {
     const touchStartX = ref(0);
     const touchEndX = ref(0);
     const isDraggingEvent = ref(false);
+    const headerHeight = ref(0); // 헤더 높이를 저장
 
     provide("calendarApi", calendarRef);
 
@@ -111,37 +112,20 @@ export default {
       customButtons: {
         myPrev: {
           text: "〈",
-          async click() {
-            const calendarApi = calendarRef.value.getApi();
-
-            const today = calendarApi.view.activeStart;
-            const day = today.toISOString().replace(/T.*$/, '');
-
-            calendarApi.prev();
-
-            ReLoadEvents(day);
+          click: ()=> {
+            handleCustomButtonClick("prev");
           },
         },
         myNext: {
           text: "〉",
-          async click() {
-            const calendarApi = calendarRef.value.getApi();
-            const today = calendarApi.view.activeEnd;
-            const day = today.toISOString().replace(/T.*$/, '');
-            calendarApi.next();
-
-            ReLoadEvents(day);
+          click: ()=> {
+            handleCustomButtonClick("next");
           },
         },
         myToday: {
           text: "Ｄ",
-          async click() {
-            const calendarApi = calendarRef.value.getApi();
-            calendarApi.today();
-            const today = calendarApi.getDate();
-            const day = today.toISOString().replace(/T.*$/, '');
-
-            ReLoadEvents(day);
+          click: ()=> {
+            handleCustomButtonClick("today");
           },
         },
       },
@@ -218,6 +202,29 @@ export default {
       //모든 이밴트 감지
       eventsSet:  () => {
       },
+    };
+
+    const handleCustomButtonClick = (action) => {
+      const calendarApi = calendarRef.value.getApi();
+      let day = "";
+      
+      if(action === "prev"){
+        const today = calendarApi.view.activeStart;
+        day = today.toISOString().replace(/T.*$/, '');
+        calendarApi.prev();
+      }else if(action === "next"){
+        const today = calendarApi.view.activeEnd;
+        day = today.toISOString().replace(/T.*$/, '');
+        calendarApi.next()
+      }else if(action === "today"){
+        calendarApi.today();
+        const today = calendarApi.getDate();
+        day = today.toISOString().replace(/T.*$/, '');
+      }else{
+        return;
+      };
+
+      ReLoadEvents(day);
     };
 
     const ReLoadEvents = async (todayStr) => {
@@ -366,6 +373,15 @@ export default {
 
     // 터치 이벤트 핸들러
     const handleTouchStart = (event) => {
+      // 터치 시작 위치
+      const touchY = event.touches[0].clientY;
+
+      // 헤더 영역에서 터치가 시작되었는지 확인
+      if (touchY < headerHeight.value) {
+        isDraggingEvent.value = true;  //swipe가 처리되지 않도록 이밴트 드래그 중으로 설정
+        return; // 헤더 영역이면 동작 중단
+      };
+      
       touchStartX.value = event.touches[0].clientX;
 
       // 이벤트 드래그 여부 확인
@@ -387,15 +403,21 @@ export default {
       const screenWidth = window.innerWidth;
 
       // 스와이프 시작 및 끝 위치가 화면의 양 끝 부분(10% 이내)인지 확인
-      const startInEdge = touchStartX.value < screenWidth * 0.4 || touchStartX.value > screenWidth * 0.6;
-      const endInEdge = touchEndX.value < screenWidth * 0.4 || touchEndX.value > screenWidth * 0.6;
+      const startInEdge = touchStartX.value < screenWidth * 0.45 || touchStartX.value > screenWidth * 0.55;
+      const endInEdge = touchEndX.value < screenWidth * 0.45 || touchEndX.value > screenWidth * 0.55;
 
       if (startInEdge && endInEdge) {
         // 스와이프 거리에 따라 prev/next 호출
-        if (swipeDistance > 200) {
-          calendarRef.value.getApi().next(); // 다음 달로 이동
-        } else if (swipeDistance < -200) {
-          calendarRef.value.getApi().prev(); // 이전 달로 이동
+        if (swipeDistance > 50) {
+          handleCustomButtonClick("next");
+          //calendarRef.value.getApi().next(); // 다음 달로 이동
+          //calendarRef.value.getApi().refetchEvents();
+          //calendarRef.value.getApi().render();
+        } else if (swipeDistance < -50) {
+          handleCustomButtonClick("prev");
+          //calendarRef.value.getApi().prev(); // 이전 달로 이동
+          //calendarRef.value.getApi().refetchEvents();
+          //calendarRef.value.getApi().render();
         }
       };
     };
@@ -403,6 +425,14 @@ export default {
     // 이벤트 리스너 등록 및 해제
     onMounted(() => {
       const calendarEl = calendarRef.value.$el;
+
+      // 헤더 높이 계산
+      const headerEl = calendarEl.querySelector('.fc-header-toolbar');
+      if (headerEl) {
+        headerHeight.value = headerEl.offsetHeight; // 헤더 높이를 저장
+      }
+
+      console.log("headerHeight.value:",headerHeight.value);
 
       calendarEl.addEventListener('touchstart', handleTouchStart);
       calendarEl.addEventListener('touchmove', handleTouchMove);
