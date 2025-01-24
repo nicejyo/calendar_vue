@@ -67,6 +67,7 @@ export default {
     const touchEndX = ref(0);
     const isDraggingEvent = ref(false);
     const headerHeight = ref(0); // 헤더 높이를 저장
+    const reminders = ref([]); // 알림 타이머 관리
 
     provide("calendarApi", calendarRef);
 
@@ -128,6 +129,37 @@ export default {
             handleCustomButtonClick("today");
           },
         },
+      },
+      eventDidMount: function (eventInfo) {
+        //const eventTime = new Date(eventInfo.event.start).toISOString().replace(
+        //        /(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}.\d{3}Z/,
+        //        '$1 $2'
+        //      );
+        const eventStart = new Date(eventInfo.event.start).getTime();
+        const now = new Date().getTime();
+
+        // 알림 10분 전 설정
+        const alramTime = 10;
+        const reminderTime = eventStart - alramTime * 60 * 1000;
+
+        if ((reminderTime > now) && (!eventInfo.event.allDay))  {
+          // 알림 예약
+          const timerId = setTimeout(() => {
+            if (Notification.permission === "granted") {
+              new Notification(` ${alramTime}분 후에 [ ${eventInfo.event.title} ] 일정이 시작됩니다.`);
+            } else {
+              Notification.requestPermission().then((permission) => {
+                if (permission === "granted") {
+                  new Notification(` ${alramTime}분분 후에 [ ${eventInfo.event.title} ] 일정이 시작됩니다.`);
+                };
+              });
+            };
+            clearReminder(eventInfo.event.id);
+          }, reminderTime - now);
+
+          // reminders 배열에 알림 타이머 저장
+          reminders.value.push({ id: eventInfo.event.id, timerId });
+        }
       },
       eventDragStart: function(info) {
         //console.log('Drag started on mobile:', info.event);
@@ -237,6 +269,15 @@ export default {
     };
 
     ReLoadEvents(todayStr);
+
+    // 특정 알림 타이머 제거
+    const clearReminder = (eventId) => {
+      const reminderIndex = reminders.value.findIndex(r => r.id === eventId);
+      if (reminderIndex > -1) {
+        clearTimeout(reminders.value[reminderIndex].timerId); // 타이머 제거
+        reminders.value.splice(reminderIndex, 1); // 배열에서 알림 삭제
+      }
+    };
 
     // 날짜 클릭 시 팝업 열기
     const selectClick = (info) => {
@@ -431,8 +472,6 @@ export default {
       if (headerEl) {
         headerHeight.value = headerEl.offsetHeight; // 헤더 높이를 저장
       }
-
-      console.log("headerHeight.value:",headerHeight.value);
 
       calendarEl.addEventListener('touchstart', handleTouchStart);
       calendarEl.addEventListener('touchmove', handleTouchMove);
