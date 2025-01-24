@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { ref, provide, reactive, nextTick, watch } from "vue";
+import { ref, provide, reactive, nextTick, onMounted, onBeforeUnmount } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -62,7 +62,10 @@ export default {
     const eventTitle = ref("");
     const selectedDate = ref(null);
     const selectedTitle = ref(null);
-
+    // 터치 드레그 관리
+    const touchStartX = ref(0);
+    const touchEndX = ref(0);
+    const isDraggingEvent = ref(false);
 
     provide("calendarApi", calendarRef);
 
@@ -359,6 +362,59 @@ export default {
           calendarRef.value.getApi().updateSize();
         }
       });
+    });
+
+    // 터치 이벤트 핸들러
+    const handleTouchStart = (event) => {
+      touchStartX.value = event.touches[0].clientX;
+
+      // 이벤트 드래그 여부 확인
+      const targetElement = event.target;
+      isDraggingEvent.value = targetElement.closest('.fc-event') !== null;
+    };
+
+    const handleTouchMove = (event) => {
+      touchEndX.value = event.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      if (isDraggingEvent.value) {
+        // 이벤트 드래그 중일 경우 스와이프 처리 중단
+        return;
+      }
+
+      const swipeDistance = touchStartX.value - touchEndX.value;
+      const screenWidth = window.innerWidth;
+
+      // 스와이프 시작 및 끝 위치가 화면의 양 끝 부분(10% 이내)인지 확인
+      const startInEdge = touchStartX.value < screenWidth * 0.4 || touchStartX.value > screenWidth * 0.6;
+      const endInEdge = touchEndX.value < screenWidth * 0.4 || touchEndX.value > screenWidth * 0.6;
+
+      if (startInEdge && endInEdge) {
+        // 스와이프 거리에 따라 prev/next 호출
+        if (swipeDistance > 200) {
+          calendarRef.value.getApi().next(); // 다음 달로 이동
+        } else if (swipeDistance < -200) {
+          calendarRef.value.getApi().prev(); // 이전 달로 이동
+        }
+      };
+    };
+
+    // 이벤트 리스너 등록 및 해제
+    onMounted(() => {
+      const calendarEl = calendarRef.value.$el;
+
+      calendarEl.addEventListener('touchstart', handleTouchStart);
+      calendarEl.addEventListener('touchmove', handleTouchMove);
+      calendarEl.addEventListener('touchend', handleTouchEnd);
+    });
+
+    onBeforeUnmount(() => {
+      const calendarEl = calendarRef.value.$el;
+
+      calendarEl.removeEventListener('touchstart', handleTouchStart);
+      calendarEl.removeEventListener('touchmove', handleTouchMove);
+      calendarEl.removeEventListener('touchend', handleTouchEnd);
     });
 
     return {
